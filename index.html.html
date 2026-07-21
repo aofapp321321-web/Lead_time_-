@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | Lead Time การจัดส่งสินค้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --navy-950:#0a1526;
+    --navy-900:#0f2038;
+    --navy-800:#16294a;
+    --navy-700:#203a63;
+    --teal-500:#0e9488;
+    --teal-400:#17b3a4;
+    --teal-100:#e2f6f3;
+    --violet-500:#6d5bd0;
+    --violet-100:#ece9fb;
+    --amber-500:#e2932e;
+    --amber-100:#fdf0dc;
+    --red-500:#e0554a;
+    --red-100:#fce7e4;
+    --green-500:#2ca06e;
+    --green-100:#e1f6ec;
+    --bg:#eef1f7;
+    --card:#ffffff;
+    --ink-900:#12192b;
+    --ink-700:#414c62;
+    --ink-500:#6d7891;
+    --ink-300:#aab2c5;
+    --line:#e6e9f2;
+    --radius:16px;
+    --shadow: 0 1px 2px rgba(16,24,50,.03), 0 10px 28px -14px rgba(16,24,50,.14);
+    --shadow-hover: 0 2px 4px rgba(16,24,50,.05), 0 16px 36px -14px rgba(16,24,50,.2);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 100% -10%, rgba(23,179,164,.06), transparent 60%),
+      var(--bg);
+    font-family:'Sarabun', sans-serif;
+    color:var(--ink-900);
+    -webkit-font-smoothing:antialiased;
+    font-size:14.5px;
+  }
+  h1,h2,h3,.font-display{font-family:'Kanit', sans-serif;}
+  .app{min-height:100%;}
+
+  /* ===== Header ===== */
+  .topbar{
+    background: linear-gradient(125deg, var(--navy-950) 0%, var(--navy-900) 50%, var(--navy-800) 100%);
+    color:#fff;
+    padding:26px 28px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute; right:-60px; top:-100px;
+    width:380px; height:380px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, rgba(23,179,164,.4), transparent 70%);
+    pointer-events:none;
+  }
+  .topbar::before{
+    content:"";
+    position:absolute; left:20%; bottom:-140px;
+    width:280px; height:280px; border-radius:50%;
+    background: radial-gradient(circle at 50% 50%, rgba(109,91,208,.28), transparent 70%);
+    pointer-events:none;
+  }
+  .topbar-inner{position:relative; z-index:1; display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:14px;}
+  .eyebrow{
+    font-family:'Kanit',sans-serif;
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--teal-400); font-weight:600; margin:0 0 6px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .eyebrow::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--teal-400); box-shadow:0 0 0 4px rgba(23,179,164,.25);}
+  .topbar h1{font-size:27px; font-weight:600; margin:0; letter-spacing:.2px;}
+  .topbar .sub{color:#b7c0d6; font-size:13.5px; margin-top:7px; max-width:640px; line-height:1.5;}
+  .topbar-stats{display:flex; gap:10px;}
+  .topbar-stat{text-align:right; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:10px 16px;}
+  .topbar-stat .num{font-family:'Kanit',sans-serif; font-size:21px; font-weight:600; color:#fff;}
+  .topbar-stat .lbl{font-size:11px; color:#94a0bd; margin-top:2px;}
+
+  /* ===== Filter bar ===== */
+  .filterbar{
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    padding:14px 28px;
+    position:sticky; top:0; z-index:20;
+    box-shadow:0 2px 10px rgba(16,24,50,.04);
+    display:flex; flex-wrap:wrap; gap:18px; align-items:center;
+  }
+  .filter-group{display:flex; flex-direction:column; gap:6px;}
+  .filter-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--ink-500); font-weight:600;
+  }
+  .chip-row{display:flex; gap:6px; flex-wrap:wrap;}
+  .chip{
+    border:1px solid var(--line); background:#fbfcfe; color:var(--ink-700);
+    font-family:'Sarabun',sans-serif; font-size:13px; font-weight:500;
+    padding:6px 14px; border-radius:999px; cursor:pointer;
+    transition:.15s ease; white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--teal-400); color:var(--teal-500); background:var(--teal-100);}
+  .chip.active{background:var(--navy-900); border-color:var(--navy-900); color:#fff; box-shadow:0 4px 10px -4px rgba(16,32,56,.5);}
+  select.select-input{
+    border:1px solid var(--line); border-radius:8px; padding:7px 10px;
+    font-family:'Sarabun',sans-serif; font-size:13.5px; color:var(--ink-900);
+    background:#fbfcfe url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%236b7488"/></svg>') no-repeat right 10px center;
+    appearance:none; -webkit-appearance:none; min-width:170px; cursor:pointer;
+  }
+  select.select-input:focus{outline:2px solid var(--teal-400); outline-offset:1px;}
+  .btn-reset{
+    margin-left:auto; border:1px solid var(--line); background:#fff;
+    color:var(--ink-500); font-size:13px; padding:8px 14px; border-radius:8px;
+    cursor:pointer; font-family:'Sarabun',sans-serif; font-weight:500;
+    display:flex; align-items:center; gap:6px;
+  }
+  .btn-reset:hover{color:var(--red-500); border-color:var(--red-500);}
+
+  /* ===== Layout ===== */
+  .content{padding:22px 28px 50px; max-width:1520px; margin:0 auto;}
+  .kpi-row{display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:20px;}
+  .kpi-card{
+    background:var(--card); border-radius:var(--radius); padding:18px 20px;
+    box-shadow:var(--shadow); border:1px solid var(--line);
+    position:relative; overflow:hidden;
+    transition:box-shadow .18s ease, transform .18s ease;
+  }
+  .kpi-card:hover{box-shadow:var(--shadow-hover); transform:translateY(-2px);}
+  .kpi-card .bar{position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:0 4px 4px 0;}
+  .kpi-label{font-size:12px; color:var(--ink-500); font-weight:600; margin-bottom:9px; text-transform:uppercase; letter-spacing:.03em;}
+  .kpi-value{font-family:'Kanit',sans-serif; font-size:27px; font-weight:600; color:var(--ink-900); line-height:1;}
+  .kpi-unit{font-size:13px; color:var(--ink-500); font-weight:500; margin-left:3px;}
+  .kpi-sub{font-size:12px; margin-top:9px; color:var(--ink-500);}
+  .kpi-sub b{color:inherit;}
+  .kpi-substats{display:flex; align-items:stretch; gap:12px; margin-top:11px;}
+  .kpi-substat{display:flex; flex-direction:column; gap:3px;}
+  .kpi-substat-val{font-family:'Kanit',sans-serif; font-size:15px; font-weight:600; line-height:1;}
+  .kpi-substat-lbl{font-size:10px; color:var(--ink-500); text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+  .kpi-substat-divider{width:1px; align-self:stretch; background:var(--line);}
+
+  .grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px;}
+  .grid2b{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  .card{
+    background:var(--card); border-radius:var(--radius); border:1px solid var(--line);
+    box-shadow:var(--shadow); padding:20px 22px;
+    transition:box-shadow .18s ease;
+  }
+  .card:hover{box-shadow:var(--shadow-hover);}
+  .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;}
+  .card-title{font-family:'Kanit',sans-serif; font-size:15.5px; font-weight:600; color:var(--ink-900);}
+  .card-note{font-size:11.5px; color:var(--ink-300); margin-top:2px;}
+  .chart-wrap{position:relative; height:260px;}
+  .chart-wrap.tall{height:340px;}
+
+  /* ===== Custom SVG trend chart ===== */
+  .trend-svg-wrap{width:100%; height:100%;}
+  .trend-svg-wrap svg{width:100%; height:100%; overflow:visible;}
+  .trend-bar-label{font-family:'Sarabun',sans-serif; font-size:11px; fill:var(--ink-500); text-anchor:middle;}
+  .trend-line-label{font-family:'Sarabun',sans-serif; font-size:11.5px; font-weight:600; fill:var(--navy-800); text-anchor:middle;}
+  .trend-axis-label{font-family:'Sarabun',sans-serif; font-size:11.5px; fill:var(--ink-500); text-anchor:middle;}
+  .trend-legend{display:flex; gap:18px; justify-content:center; margin-top:10px; font-size:12.5px; color:var(--ink-500);}
+  .trend-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .trend-legend i{width:11px; height:11px; border-radius:3px; display:inline-block;}
+
+  /* ===== Donut chart ===== */
+  .donut-wrap{display:flex; align-items:center; gap:26px; height:100%; flex-wrap:wrap;}
+  .donut-ring{
+    width:176px; height:176px; border-radius:50%; position:relative; flex-shrink:0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.02), 0 8px 20px -12px rgba(16,24,50,.25);
+  }
+  .donut-hole{
+    position:absolute; inset:28px; background:#fff; border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow: 0 1px 3px rgba(16,24,50,.06);
+  }
+  .donut-hole .num{font-family:'Kanit',sans-serif; font-size:22px; font-weight:600; color:var(--ink-900); line-height:1;}
+  .donut-hole .lbl{font-size:11px; color:var(--ink-500); margin-top:4px;}
+  .donut-legend{display:flex; flex-direction:column; gap:12px; flex:1; min-width:150px;}
+  .legend-item{display:flex; align-items:center; gap:9px; font-size:13.5px;}
+  .legend-dot{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
+  .legend-text{color:var(--ink-700); font-weight:500;}
+  .legend-sub{font-size:11.5px; color:var(--ink-300); margin-left:19px;}
+  .legend-pct{margin-left:auto; font-family:'Kanit',sans-serif; font-weight:600; color:var(--ink-900); font-size:15px;}
+
+  /* ===== Horizontal bar list ===== */
+  .barlist{display:flex; flex-direction:column; gap:13px; padding:2px 2px 0;}
+  .barlist-row{display:flex; align-items:center; gap:12px;}
+  .barlist-label{
+    width:118px; flex-shrink:0; font-size:12.5px; color:var(--ink-700); font-weight:500;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .barlist-track{flex:1; background:#eef1f6; border-radius:7px; height:19px; position:relative; overflow:hidden;}
+  .barlist-fill{
+    height:100%; border-radius:7px; transition:width .7s cubic-bezier(.4,0,.2,1);
+    display:flex; align-items:center; justify-content:flex-end;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,.08);
+  }
+  .barlist-value{width:96px; flex-shrink:0; text-align:right; font-size:12.5px; color:var(--ink-500); font-variant-numeric:tabular-nums;}
+  .barlist-value b{color:var(--ink-900); font-weight:600; font-family:'Kanit',sans-serif; font-size:13.5px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-500); font-weight:600; padding:11px 14px; border-bottom:2px solid var(--line);
+    cursor:pointer; user-select:none; white-space:nowrap; transition:color .12s, background .12s;
+  }
+  thead th:hover{color:var(--teal-500); background:var(--teal-100);}
+  thead th::after{content:''; display:inline-block; width:10px;}
+  thead th.sorted-asc::after, thead th.sorted-desc::after{
+    width:auto; margin-left:4px; font-size:9px; color:var(--teal-500);
+  }
+  thead th.sorted-asc::after{content:'▲';}
+  thead th.sorted-desc::after{content:'▼';}
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--line); color:var(--ink-700);}
+  tbody tr:nth-child(even){background:#fafbfd;}
+  tbody tr:hover{background:var(--teal-100);}
+  .route-cell{font-weight:500; color:var(--ink-900);}
+  .num-cell{text-align:right; font-variant-numeric:tabular-nums; font-family:'Kanit',sans-serif;}
+  .badge{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600;
+  }
+  .badge-green{background:var(--green-100); color:var(--green-500);}
+  .badge-amber{background:var(--amber-100); color:var(--amber-500);}
+  .badge-red{background:var(--red-100); color:var(--red-500);}
+
+  .table-scroll{max-height:460px; overflow:auto; border-top:1px solid var(--line); margin-top:8px; border-radius:8px;}
+  .table-scroll thead th{position:sticky; top:0; background:var(--card); z-index:2;}
+
+  /* ===== Grouped detail view (month -> route) ===== */
+  .grouped-scroll{max-height:520px; overflow:auto; margin-top:2px;}
+  .month-group{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  .month-group summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:13px 16px; background:#f8fafc; transition:background .12s;
+  }
+  .month-group summary:hover{background:var(--teal-100);}
+  .month-group summary::-webkit-details-marker{display:none;}
+  .month-group-title{
+    display:flex; align-items:center; gap:8px; font-family:'Kanit',sans-serif;
+    font-weight:600; font-size:14.5px; color:var(--ink-900);
+  }
+  .month-group-title::before{
+    content:'▸'; color:var(--ink-300); font-size:12px; transition:transform .15s ease;
+  }
+  .month-group[open] .month-group-title::before{transform:rotate(90deg);}
+  .month-group-stats{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-500); font-weight:500;}
+  .month-group-stats b{color:var(--ink-900); font-family:'Kanit',sans-serif; font-weight:600;}
+  .subtable{width:100%; border-collapse:collapse; font-size:13px;}
+  .subtable thead th{
+    font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-500);
+    font-weight:600; padding:8px 16px; border-bottom:1px solid var(--line); text-align:left;
+  }
+  .subtable tbody td{padding:8px 16px; border-bottom:1px solid var(--line); color:var(--ink-700);}
+  .subtable tbody tr:last-child td{border-bottom:none;}
+  .subtable tbody tr:hover{background:#f8fafc;}
+  .empty-state{padding:34px 10px; text-align:center; color:var(--ink-300); font-size:13.5px;}
+
+  .search-input{
+    border:1px solid var(--line); border-radius:8px; padding:7px 12px; font-size:13px;
+    font-family:'Sarabun',sans-serif; width:220px;
+  }
+  .search-input:focus{outline:2px solid var(--teal-400); outline-offset:1px;}
+
+  footer{
+    text-align:center; padding:24px; color:var(--ink-300); font-size:12px;
+  }
+
+  @media (max-width: 1180px){
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+    .grid2, .grid2b{grid-template-columns:1fr;}
+  }
+  @media (max-width: 680px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .topbar-stats{display:none;}
+  }
+
+  /* ===== Sync status ===== */
+  .sync-pill{
+    display:flex; align-items:center; gap:8px; font-size:12px; color:#b7c0d6;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);
+    border-radius:999px; padding:7px 14px; white-space:nowrap;
+  }
+  .sync-dot{width:7px; height:7px; border-radius:50%; background:var(--teal-400); flex-shrink:0;}
+  .sync-dot.loading{background:var(--amber-500); animation:pulse 1s infinite;}
+  .sync-dot.error{background:var(--red-500); animation:none;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  .sync-refresh-btn{
+    background:none; border:none; color:#b7c0d6; cursor:pointer; font-size:13px;
+    padding:0; margin-left:2px; text-decoration:underline; font-family:'Sarabun',sans-serif;
+  }
+  .sync-refresh-btn:hover{color:#fff;}
+  .error-banner{
+    background:var(--red-100); color:var(--red-500); border:1px solid #f3c7c2;
+    border-radius:10px; padding:11px 16px; margin:0 28px 16px; font-size:13px;
+    display:none; align-items:center; gap:10px;
+  }
+  .error-banner.show{display:flex;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <p class="eyebrow">Logistics Performance</p>
+        <h1>Lead Time การจัดส่งสินค้า</h1>
+        <div class="sub">แดชบอร์ดสรุประยะเวลาในการจัดส่งสินค้า — เลือกช่วงเวลา เส้นทาง และจังหวัดเพื่อดูข้อมูลเฉพาะส่วนที่สนใจ</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+        <div class="topbar-stats" id="topbarStats"></div>
+        <div class="sync-pill">
+          <span class="sync-dot" id="syncDot"></span>
+          <span id="syncLabel">กำลังโหลดข้อมูล…</span>
+          <button class="sync-refresh-btn" id="manualRefreshBtn">รีเฟรชตอนนี้</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-banner" id="errorBanner">
+    <span>⚠</span>
+    <span id="errorBannerText"></span>
+  </div>
+
+  <div class="filterbar">
+    <div class="filter-group">
+      <div class="filter-label">เดือน</div>
+      <div class="chip-row" id="monthChips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">กลุ่มเส้นทาง</div>
+      <div class="chip-row" id="routeChips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">จังหวัด</div>
+      <select class="select-input" id="provinceSelect"></select>
+    </div>
+    <button class="btn-reset" id="resetBtn">↺ ล้างตัวกรอง</button>
+  </div>
+
+  <div class="content">
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">แนวโน้มรายเดือน — จำนวนออเดอร์ &amp; Lead Time เฉลี่ย</div>
+          </div>
+          <div class="card-note">แท่ง = จำนวนออเดอร์ · เส้น = LT เฉลี่ย (วัน)</div>
+        </div>
+        <div class="chart-wrap tall" id="trendChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">สัดส่วนสถานะการจัดส่ง</div>
+          <div class="card-note">ตามตัวกรองปัจจุบัน</div>
+        </div>
+        <div class="chart-wrap tall" id="statusDonut"></div>
+      </div>
+    </div>
+
+    <div class="grid2b">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">เปรียบเทียบตามกลุ่มเส้นทาง</div>
+          <div class="card-note">% ส่งภายใน 3 วัน ต่อกลุ่ม</div>
+        </div>
+        <div class="chart-wrap" id="routeBar"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">จังหวัดที่มีปริมาณส่งสูงสุด (Top 12)</div>
+          <div class="card-note">แท่ง = จำนวนออเดอร์ · สี = LT เฉลี่ย</div>
+        </div>
+        <div class="chart-wrap" id="provinceBar"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">ประสิทธิภาพสายส่ง (ขนส่ง)</div>
+          <div class="card-note">กรองตามเดือนเท่านั้น · เรียงตามปริมาณ</div>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="carrierTable">
+          <thead><tr>
+            <th data-key="name">สายส่ง</th>
+            <th data-key="shipments" style="text-align:right">ออเดอร์</th>
+            <th data-key="avgLT" style="text-align:right">LT เฉลี่ย</th>
+            <th data-key="onTimePct" style="text-align:right">%ภายใน 3 วัน</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">สรุปตามเดือน → เส้นทาง</div>
+          <div class="card-note">รวมยอดของแต่ละเดือน แยกรายละเอียดเป็นกลุ่มเส้นทาง สรุปสัดส่วน ภายใน 3 วัน / ภายใน 7 วัน / เกิน 7 วัน</div>
+        </div>
+      </div>
+      <div class="grid2" style="margin-bottom:0;">
+        <div id="routeMonthGroupedWrap" class="grouped-scroll" style="max-height:520px;"></div>
+        <div>
+          <div class="chart-wrap tall" id="routeMonthDonut"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">ตารางรายละเอียด</div>
+          <div class="card-note" id="detailNote">คลิกหัวตารางเพื่อเรียงลำดับ</div>
+        </div>
+        <input type="text" class="search-input" id="detailSearch" placeholder="ค้นหาจังหวัด/เส้นทาง...">
+      </div>
+      <div class="filter-group" style="margin-bottom:14px;">
+        <div class="filter-label">กรองตามสถานะ</div>
+        <div class="chip-row" id="statusChips"></div>
+      </div>
+
+      <div class="table-scroll" id="detailFlatWrap">
+        <table id="detailTable">
+          <thead><tr>
+            <th data-key="month">เดือน</th>
+            <th data-key="route">เส้นทาง</th>
+            <th data-key="status">สถานะ</th>
+            <th data-key="shipments" style="text-align:right">ออเดอร์</th>
+            <th data-key="packages" style="text-align:right">จำนวนห่อ</th>
+            <th data-key="avgLT" style="text-align:right">LT เฉลี่ย</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div id="detailGroupedWrap" style="display:none;"></div>
+    </div>
+
+  </div>
+
+  <footer>Lead Time Dashboard · ข้อมูลจากไฟล์ Lead_time_การจัดส่งสินค้า.xlsx</footer>
+</div>
+
+
+<script>
+// ============================================================
+// ============ Live data source: Google Sheet (CSV) ============
+// ============================================================
+// วิธีแก้ค่าถ้าต้องเปลี่ยนชีท/แท็บ: แก้ค่าเหล่านี้
+const SHEET_ID = '1Xc7-rD9joUZW0mJMhk8KhmcWx3JFSgMpzQ0l15spe-k'; // ใช้ได้ถ้าเปิด Share > Anyone with the link
+const PUBLISHED_ID = '2PACX-1vQFxE5_mBesMLujllZEP-KCBKJc-fXX-BGipEnihaun10VUdZCaW75M7E8XC4D2uT1rLYCzm363Bv98'; // จาก File > Share > Publish to web
+const SHEET_GID = '0';
+const CSV_URL_GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+const CSV_URL_PUB = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?gid=${SHEET_GID}&single=true&output=csv`;
+const REFRESH_INTERVAL_MS = 30000; // อัปเดตอัตโนมัติทุก 30 วินาที ปรับได้ตรงนี้
+
+// ตำแหน่งคอลัมน์ในชีท (0 = A, 1 = B, ...) ตามที่เห็นในภาพตัวอย่าง
+const COL = {
+  SHIP_DATE: 0,   // A: วันที่ส่งของ
+  BILL_DATE: 1,   // B: วันที่บิล
+  PACKAGES: 5,    // F: จำนวนห่อ
+  ROUTE_ABBR: 6,  // G: ตัวย่อ (ไม่ใช้จำแนกเส้นทางแล้ว เก็บไว้เผื่ออ้างอิง)
+  CARRIER: 7,     // H: ขนส่ง (ใช้คอลัมน์นี้จำแนกเส้นทางจริง)
+  PROVINCE: 12,   // M: จังหวัด
+};
+
+// เส้นทางจำแนกจากชื่อขนส่งในคอลัมน์ H (ไม่ใช่รหัสย่อคอลัมน์ G) ตามแพทเทิร์นจริงในชีท:
+//   - ตรงกับ "ต่างจังหวัด-รถบริษัท" เป๊ะ                → ต่างจังหวัด-รถบริษัท
+//   - มีเลขในวงเล็บต่อท้าย เช่น สุรินทร์พนมรุ้ง(5)        → ขนส่ง (บริษัทขนส่งเอกชนต่างจังหวัด)
+//   - ชื่อพื้นที่ในกรุงเทพ/ปริมณฑล ไม่มีวงเล็บ เช่น บางนา  → กรุงเทพและปริมณฑล
+const ROUTE_DISPLAY_ORDER = ['กรุงเทพและปริมณฑล','ขนส่ง','ต่างจังหวัด-รถบริษัท'];
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function resolveRoute(carrierName){
+  const c = (carrierName || '').trim();
+  if (!c) return 'ไม่ระบุ';
+  if (c === 'ต่างจังหวัด-รถบริษัท') return 'ต่างจังหวัด-รถบริษัท';
+  if (/\(\d+\)/.test(c)) return 'ขนส่ง';
+  return 'กรุงเทพและปริมณฑล';
+}
+
+// รองรับ D/M/YY(YY) แบบไทย (พ.ศ.) และ YYYY-MM-DD แบบสากล เผื่อ Google ส่งค่ามาคนละรูปแบบ
+function parseFlexibleDate(str){
+  if (!str) return null;
+  str = String(str).trim();
+  let m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m){
+    let d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+    if (y < 100) y += 2500;      // ปี พ.ศ. แบบ 2 หลัก เช่น 69 -> 2569
+    if (y > 2400) y -= 543;      // พ.ศ. -> ค.ศ.
+    const dt = new Date(y, mo - 1, d);
+    return isNaN(dt) ? null : dt;
+  }
+  m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m){
+    const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(dt) ? null : dt;
+  }
+  return null;
+}
+
+function daysBetween(a, b){
+  return Math.round((a - b) / 86400000);
+}
+
+function computeStatus(lt){
+  if (lt <= 3) return 'ส่งภายใน 3 วัน';
+  if (lt <= 7) return 'ส่งภายใน 7 วัน';
+  return 'เกิน 7 วัน';
+}
+
+async function fetchSheetCSV(){
+  const bust = '&_ts=' + Date.now();
+  try {
+    const resp = await fetch(CSV_URL_GVIZ + bust);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return await resp.text();
+  } catch (errGviz) {
+    // gviz มักติด CORS ถ้า Sheet ไม่ได้เปิดผ่าน Share > Anyone with the link
+    // ลอง fallback ไปที่ลิงก์ Publish-to-web แทน
+    try {
+      const resp2 = await fetch(CSV_URL_PUB + bust);
+      if (!resp2.ok) throw new Error('HTTP ' + resp2.status);
+      return await resp2.text();
+    } catch (errPub) {
+      throw new Error('gviz: ' + errGviz.message + ' / pub: ' + errPub.message);
+    }
+  }
+}
+
+// ============================================================
+// ============ วิธีที่ 1 (หลัก): ดึงข้อมูลผ่าน JSONP <script> tag ============
+// ไม่ใช้ fetch/XHR เลย จึงไม่ติดข้อจำกัด CORS ของเบราว์เซอร์
+// ใช้ได้แม้เปิดไฟล์นี้แบบ file:// ตรงๆ (ดับเบิลคลิก) ซึ่ง fetch() จะถูกบล็อกเสมอ
+// เพราะหน้าที่รันจาก file:// ไม่มี origin ปกติ (Origin: null)
+// ============================================================
+function loadViaJSONP(timeoutMs = 12000){
+  return new Promise((resolve, reject) => {
+    const cbName = '__gvizCB_' + Math.random().toString(36).slice(2);
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${SHEET_GID}&tqx=out:json;responseHandler:${cbName}&_ts=${Date.now()}`;
+    const script = document.createElement('script');
+    let done = false;
+
+    const cleanup = () => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error('หมดเวลารอข้อมูล (timeout)'));
+    }, timeoutMs);
+
+    window[cbName] = (response) => {
+      if (done) return;
+      done = true;
+      cleanup();
+      if (!response || !response.table) {
+        reject(new Error('รูปแบบข้อมูลที่ได้ไม่ถูกต้อง'));
+        return;
+      }
+      if (response.status === 'error') {
+        const msg = (response.errors && response.errors[0] && response.errors[0].detailed_message) || 'gviz ส่ง error กลับมา';
+        reject(new Error(msg));
+        return;
+      }
+      resolve(response.table);
+    };
+
+    script.onerror = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error('โหลด script จาก Google Sheets ไม่สำเร็จ (เช็คว่า Sheet เปิดเป็น "Anyone with the link" แล้ว)'));
+    };
+
+    script.src = url;
+    document.head.appendChild(script);
+  });
+}
+
+// แปลงผลลัพธ์แบบ google.visualization table ให้เป็น array แถวดิบ (row[colIndex] = ค่าข้อความ)
+// รูปแบบเดียวกับที่ Papa.parse คืนมาจาก CSV เพื่อให้ buildRAW() ใช้ได้เหมือนเดิม
+function gvizTableToRows(table){
+  return (table.rows || []).map(r =>
+    (r.c || []).map(cell => {
+      if (!cell) return '';
+      if (cell.f !== undefined && cell.f !== null) return cell.f; // ค่าที่แสดงผลจริงในชีท (ตรงกับที่ parseFlexibleDate คาดหวัง)
+      if (cell.v === undefined || cell.v === null) return '';
+      return String(cell.v);
+    })
+  );
+}
+
+// แปลงข้อมูลดิบ 1 แถวต่อ 1 ออเดอร์ ให้เป็นก้อนสรุปแบบเดียวกับที่ dashboard ต้องการ
+function buildRAW(rawRows){
+  const detailMap = new Map();
+  const carrierMap = new Map();
+  const monthsSet = new Set();
+  const routesSet = new Set();
+  const provincesSet = new Set();
+
+  rawRows.forEach(row => {
+    const shipDate = parseFlexibleDate(row[COL.SHIP_DATE]);
+    const billDate = parseFlexibleDate(row[COL.BILL_DATE]);
+    if (!shipDate || !billDate) return; // ข้ามแถวที่วันที่อ่านไม่ออก (เช่นแถวว่าง)
+
+    const packages = parseFloat(row[COL.PACKAGES]) || 0;
+    const carrierName = (row[COL.CARRIER] || '').trim() || 'ไม่ระบุ';
+    const route = resolveRoute(carrierName);
+    const province = (row[COL.PROVINCE] || '').trim() || 'ไม่ระบุ';
+
+    const lt = Math.max(daysBetween(shipDate, billDate), 0);
+    const status = computeStatus(lt);
+
+    const monthKey = `${shipDate.getFullYear()}-${String(shipDate.getMonth() + 1).padStart(2, '0')}`;
+    monthsSet.add(monthKey);
+    routesSet.add(route);
+    provincesSet.add(province);
+
+    const dKey = `${monthKey}|${route}|${province}|${status}`;
+    if (!detailMap.has(dKey)) detailMap.set(dKey, { month: monthKey, route, province, status, shipments: 0, packages: 0, lt_sum: 0 });
+    const d = detailMap.get(dKey);
+    d.shipments += 1; d.packages += packages; d.lt_sum += lt;
+
+    const cKey = `${monthKey}|${carrierName}|${status}`;
+    if (!carrierMap.has(cKey)) carrierMap.set(cKey, { month: monthKey, carrier: carrierName, status, shipments: 0, packages: 0, lt_sum: 0 });
+    const c = carrierMap.get(cKey);
+    c.shipments += 1; c.packages += packages; c.lt_sum += lt;
+  });
+
+  const months = [...monthsSet].sort();
+  const months_display = {};
+  months.forEach(m => { months_display[m] = THAI_MONTHS[Number(m.split('-')[1]) - 1]; });
+
+  const routes = [...routesSet].sort((a, b) => {
+    const ia = ROUTE_DISPLAY_ORDER.indexOf(a), ib = ROUTE_DISPLAY_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b, 'th');
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  const provinces = [...provincesSet].sort((a, b) => a.localeCompare(b, 'th'));
+  const statuses = ['ส่งภายใน 3 วัน', 'ส่งภายใน 7 วัน', 'เกิน 7 วัน'];
+
+  return { months, months_display, routes, provinces, statuses, detail: [...detailMap.values()], carrier: [...carrierMap.values()] };
+}
+
+async function loadData(){
+  // วิธีที่ 1: JSONP — ลองก่อนเสมอ เพราะใช้ได้ทั้งกรณีเปิดไฟล์ local (file://) และเปิดผ่านเว็บ
+  try {
+    const table = await loadViaJSONP();
+    const rows = gvizTableToRows(table);
+    return buildRAW(rows);
+  } catch (errJsonp) {
+    // วิธีที่ 2-3: fetch แบบเดิม (เผื่อกรณี JSONP ใช้ไม่ได้ เช่นติด Content-Security-Policy)
+    try {
+      const csvText = await fetchSheetCSV();
+      const parsed = Papa.parse(csvText.trim(), { skipEmptyLines: true });
+      const rows = parsed.data.slice(1); // ตัดแถวหัวตารางออก
+      return buildRAW(rows);
+    } catch (errFetch) {
+      throw new Error('JSONP: ' + errJsonp.message + ' / fetch: ' + errFetch.message);
+    }
+  }
+}
+
+// ============================================================
+// ============ Sync status UI ============
+// ============================================================
+const syncDot = document.getElementById('syncDot');
+const syncLabel = document.getElementById('syncLabel');
+const errorBanner = document.getElementById('errorBanner');
+const errorBannerText = document.getElementById('errorBannerText');
+
+function setSyncState(kind, extra){
+  syncDot.classList.remove('loading', 'error');
+  if (kind === 'loading'){
+    syncDot.classList.add('loading');
+    syncLabel.textContent = 'กำลังอัปเดตข้อมูล…';
+  } else if (kind === 'ok'){
+    syncLabel.textContent = 'อัปเดตล่าสุด ' + extra.toLocaleTimeString('th-TH');
+    errorBanner.classList.remove('show');
+  } else if (kind === 'error'){
+    syncDot.classList.add('error');
+    syncLabel.textContent = 'อัปเดตไม่สำเร็จ';
+    errorBannerText.textContent = 'ดึงข้อมูลจาก Google Sheet ไม่สำเร็จ (' + extra + ') — กำลังแสดงข้อมูลล่าสุดที่มี และจะลองใหม่อัตโนมัติ ถ้าไม่หายให้ตรวจสอบว่า Sheet เปิดเป็น "Anyone with the link" แล้ว';
+    errorBanner.classList.add('show');
+  }
+}
+
+// ============================================================
+// ============ Render pipeline (runs every refresh) ============
+// ============================================================
+let state = null;
+let detailState = null;
+let sortState = null;
+let detailSearchTerm = '';
+
+function renderDashboard(RAW){
+  const { months, months_display, routes, provinces, statuses, detail, carrier } = RAW;
+
+  const STATUS_COLOR = {
+  'ส่งภายใน 3 วัน': '#2f9e6e',
+  'ส่งภายใน 7 วัน': '#e8983a',
+  'เกิน 7 วัน': '#d9564a',
+};
+const STATUS_ORDER = ['ส่งภายใน 3 วัน','ส่งภายใน 7 วัน','เกิน 7 วัน'];
+const fmtInt = n => Math.round(n).toLocaleString('th-TH');
+const fmt1 = n => (Math.round(n*10)/10).toLocaleString('th-TH', {minimumFractionDigits:1, maximumFractionDigits:1});
+
+// ============ Filter state (persists across auto-refreshes) ============
+if (!state){
+  state = { months: new Set(months), route: 'ALL', province: 'ALL' };
+} else {
+  // heal selection in case the underlying data changed (e.g. a new month appeared)
+  state.months = new Set([...state.months].filter(m => months.includes(m)));
+  if (state.months.size === 0) state.months = new Set(months);
+  if (state.route !== 'ALL' && !routes.includes(state.route)) state.route = 'ALL';
+  if (state.province !== 'ALL' && !provinces.includes(state.province)) state.province = 'ALL';
+}
+if (!detailState){
+  detailState = { status: 'ALL' };
+} else if (detailState.status !== 'ALL' && !statuses.includes(detailState.status)){
+  detailState.status = 'ALL';
+}
+
+// ============ Build filter UI (rebuilt each refresh, selection preserved) ============
+const monthChipsEl = document.getElementById('monthChips');
+monthChipsEl.innerHTML = '';
+months.forEach(m => {
+  const chip = document.createElement('button');
+  chip.className = 'chip' + (state.months.has(m) ? ' active' : '');
+  chip.textContent = months_display[m];
+  chip.dataset.month = m;
+  chip.addEventListener('click', () => {
+    if (state.months.has(m)) { state.months.delete(m); chip.classList.remove('active'); }
+    else { state.months.add(m); chip.classList.add('active'); }
+    if (state.months.size === 0) { months.forEach(x=>state.months.add(x)); refreshMonthChips(); }
+    render();
+  });
+  monthChipsEl.appendChild(chip);
+});
+function refreshMonthChips(){
+  [...monthChipsEl.children].forEach(c => c.classList.toggle('active', state.months.has(c.dataset.month)));
+}
+
+const routeChipsEl = document.getElementById('routeChips');
+routeChipsEl.innerHTML = '';
+const allRouteChip = document.createElement('button');
+allRouteChip.className = 'chip' + (state.route === 'ALL' ? ' active' : '');
+allRouteChip.textContent = 'ทั้งหมด';
+allRouteChip.dataset.route = 'ALL';
+routeChipsEl.appendChild(allRouteChip);
+routes.forEach(r => {
+  const chip = document.createElement('button');
+  chip.className = 'chip' + (state.route === r ? ' active' : '');
+  chip.textContent = r;
+  chip.dataset.route = r;
+  routeChipsEl.appendChild(chip);
+});
+// Assigning .onclick (not addEventListener) so re-running this on every refresh
+// replaces the old handler instead of stacking duplicate listeners.
+routeChipsEl.onclick = (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  state.route = btn.dataset.route;
+  [...routeChipsEl.children].forEach(c => c.classList.toggle('active', c === btn));
+  render();
+};
+
+const provinceSelect = document.getElementById('provinceSelect');
+provinceSelect.innerHTML = '';
+const optAll = document.createElement('option');
+optAll.value = 'ALL'; optAll.textContent = 'ทุกจังหวัด';
+provinceSelect.appendChild(optAll);
+provinces.forEach(p => {
+  const opt = document.createElement('option');
+  opt.value = p; opt.textContent = p;
+  provinceSelect.appendChild(opt);
+});
+provinceSelect.value = state.province;
+provinceSelect.onchange = () => { state.province = provinceSelect.value; render(); };
+
+document.getElementById('resetBtn').onclick = () => {
+  state.months = new Set(months);
+  state.route = 'ALL';
+  state.province = 'ALL';
+  refreshMonthChips();
+  [...routeChipsEl.children].forEach(c => c.classList.toggle('active', c.dataset.route === 'ALL'));
+  provinceSelect.value = 'ALL';
+  render();
+};
+
+// ---- Detail table: status filter (drives flat vs grouped-by-month/route view) ----
+const statusChipsEl = document.getElementById('statusChips');
+statusChipsEl.innerHTML = '';
+const allStatusChip = document.createElement('button');
+allStatusChip.className = 'chip' + (detailState.status === 'ALL' ? ' active' : '');
+allStatusChip.textContent = 'ทั้งหมด';
+allStatusChip.dataset.status = 'ALL';
+statusChipsEl.appendChild(allStatusChip);
+STATUS_ORDER.forEach(s => {
+  const chip = document.createElement('button');
+  chip.className = 'chip' + (detailState.status === s ? ' active' : '');
+  chip.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${STATUS_COLOR[s]};margin-right:6px;"></span>${s}`;
+  chip.dataset.status = s;
+  statusChipsEl.appendChild(chip);
+});
+statusChipsEl.onclick = (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  detailState.status = btn.dataset.status;
+  [...statusChipsEl.children].forEach(c => c.classList.toggle('active', c === btn));
+  renderDetailSection(filteredDetail());
+};
+
+// ============ Top bar overall stats (unfiltered) ============
+(function initTopbarStats(){
+  const totalShip = detail.reduce((a,d)=>a+d.shipments,0);
+  const totalLT = detail.reduce((a,d)=>a+d.lt_sum,0);
+  const avgLT = totalLT/totalShip;
+  const el = document.getElementById('topbarStats');
+  el.innerHTML = `
+    <div class="topbar-stat"><div class="num">${fmtInt(totalShip)}</div><div class="lbl">ออเดอร์ทั้งหมด</div></div>
+    <div class="topbar-stat"><div class="num">${fmt1(avgLT)} วัน</div><div class="lbl">LT เฉลี่ยรวม</div></div>
+    <div class="topbar-stat"><div class="num">${months_display[months[0]]}–${months_display[months[months.length-1]]}</div><div class="lbl">ช่วงข้อมูล</div></div>
+  `;
+})();
+
+// ============ Filtering helpers ============
+function filteredDetail(){
+  return detail.filter(d =>
+    state.months.has(d.month) &&
+    (state.route === 'ALL' || d.route === state.route) &&
+    (state.province === 'ALL' || d.province === state.province)
+  );
+}
+function filteredGroupByMonth(rows){
+  return rows.filter(d => state.months.has(d.month));
+}
+
+// ============ Custom charts (pure SVG/CSS — no external libraries) ============
+function buildCharts(){ /* no-op: charts are built fresh inside render() */ }
+
+function ltColor(avgLT){
+  if (avgLT <= 3) return '#2f9e6e';
+  if (avgLT <= 5) return '#8bc98a';
+  if (avgLT <= 7) return '#e8983a';
+  return '#d9564a';
+}
+
+const svgNS = 'http://www.w3.org/2000/svg';
+
+// ---- Combo bar + line trend chart ----
+function renderTrendChart(containerId, labels, bars, line){
+  const el = document.getElementById(containerId);
+  const W = 720, H = 300;
+  const mL = 20, mR = 20, mT = 26, mB = 34;
+  const plotW = W - mL - mR, plotH = H - mT - mB;
+  const n = Math.max(labels.length, 1);
+  const colW = plotW / n;
+  const barW = Math.min(colW * 0.46, 46);
+  const maxBar = Math.max(...bars, 1) * 1.28;
+  const maxLine = Math.max(...line, 0.1) * 1.35;
+
+  const xAt = i => mL + i * colW + colW / 2;
+  const barY = v => mT + plotH - (v / maxBar) * plotH;
+  const lineY = v => mT + plotH - (v / maxLine) * plotH;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  svg += `<defs>
+    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1aa89c" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#dff3f1" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>`;
+
+  // guide lines
+  [0.25, 0.5, 0.75].forEach(f => {
+    const y = mT + plotH * (1 - f);
+    svg += `<line x1="${mL}" y1="${y}" x2="${W-mR}" y2="${y}" stroke="#eef1f6" stroke-width="1"/>`;
+  });
+  svg += `<line x1="${mL}" y1="${mT+plotH}" x2="${W-mR}" y2="${mT+plotH}" stroke="#e4e8ef" stroke-width="1.2"/>`;
+
+  // bars
+  labels.forEach((lab, i) => {
+    const x = xAt(i) - barW/2;
+    const y = barY(bars[i]);
+    const h = mT + plotH - y;
+    const r = Math.min(8, barW/2);
+    svg += `<path d="M${x},${y+r} a${r},${r} 0 0 1 ${r},-${r} h${barW-2*r} a${r},${r} 0 0 1 ${r},${r} v${h-r} h${-barW} Z" fill="url(#barGrad)"/>`;
+    svg += `<text class="trend-bar-label" x="${xAt(i)}" y="${y-8}">${fmtInt(bars[i])}</text>`;
+    svg += `<text class="trend-axis-label" x="${xAt(i)}" y="${H-10}">${lab}</text>`;
+  });
+
+  // line
+  const pts = labels.map((_, i) => [xAt(i), lineY(line[i])]);
+  if (pts.length){
+    let path = `M ${pts[0][0]},${pts[0][1]}`;
+    for (let i=1;i<pts.length;i++){
+      const [x0,y0] = pts[i-1], [x1,y1] = pts[i];
+      const mx = (x0+x1)/2;
+      path += ` C ${mx},${y0} ${mx},${y1} ${x1},${y1}`;
+    }
+    svg += `<path d="${path}" fill="none" stroke="#0b1830" stroke-width="2.5" stroke-linecap="round"/>`;
+    pts.forEach(([x,y], i) => {
+      svg += `<circle cx="${x}" cy="${y}" r="4.5" fill="#0b1830" stroke="#fff" stroke-width="2"/>`;
+      svg += `<text class="trend-line-label" x="${x}" y="${y-11}">${fmt1(line[i])}</text>`;
+    });
+  }
+
+  svg += `</svg>`;
+  el.innerHTML = `<div class="trend-svg-wrap">${svg}</div>
+    <div class="trend-legend">
+      <span><i style="background:#1aa89c"></i>จำนวนออเดอร์</span>
+      <span><i style="background:#0b1830"></i>LT เฉลี่ย (วัน)</span>
+    </div>`;
+}
+
+// ---- Donut chart (pure CSS conic-gradient) ----
+function renderDonut(containerId, entries){
+  const el = document.getElementById(containerId);
+  const total = entries.reduce((a,e)=>a+e.value, 0) || 1;
+  const totalPkg = entries.reduce((a,e)=>a+(e.packages||0), 0);
+  let acc = 0;
+  const stops = entries.map(e => {
+    const from = acc / total * 100;
+    acc += e.value;
+    const to = acc / total * 100;
+    return `${e.color} ${from}% ${to}%`;
+  }).join(', ');
+
+  const legend = entries.map(e => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${e.color}"></span>
+      <span class="legend-text">${e.label}</span>
+      <span class="legend-pct">${(e.value/total*100).toFixed(1)}%</span>
+    </div>
+    <div class="legend-sub">${fmtInt(e.value)} ออเดอร์${e.packages!=null ? ' · '+fmtInt(e.packages)+' ห่อ' : ''}</div>
+  `).join('');
+
+  el.innerHTML = `
+    <div class="donut-wrap">
+      <div class="donut-ring" style="background:conic-gradient(${stops})">
+        <div class="donut-hole">
+          <div class="num">${fmtInt(total)}</div>
+          <div class="lbl">ออเดอร์ทั้งหมด</div>
+          <div class="lbl">${fmtInt(totalPkg)} ห่อ</div>
+        </div>
+      </div>
+      <div class="donut-legend">${legend}</div>
+    </div>`;
+}
+
+// ---- Horizontal bar list ----
+function renderBarList(containerId, entries, opts={}){
+  const el = document.getElementById(containerId);
+  const max = Math.max(...entries.map(e=>e.value), 1);
+  el.innerHTML = entries.map(e => {
+    const pct = Math.max((e.value/max*100), 2);
+    const valueHtml = opts.suffix
+      ? `<b>${fmt1(e.value)}</b>${opts.suffix}`
+      : `<b>${fmtInt(e.value)}</b>${e.extra ? ' · '+e.extra : ''}`;
+    return `
+      <div class="barlist-row">
+        <div class="barlist-label" title="${e.label}">${e.label}</div>
+        <div class="barlist-track">
+          <div class="barlist-fill" style="width:${pct}%; background:${e.color}"></div>
+        </div>
+        <div class="barlist-value">${valueHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+// ============ Sorting state for tables (persists across refreshes) ============
+if (!sortState) sortState = { detail:{key:'shipments', dir:-1}, carrier:{key:'shipments', dir:-1} };
+
+function updateSortIndicators(tableId, sortInfo){
+  document.querySelectorAll(`#${tableId} thead th`).forEach(th => {
+    th.classList.remove('sorted-asc','sorted-desc');
+    if (th.dataset.key === sortInfo.key){
+      th.classList.add(sortInfo.dir === 1 ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+
+function attachSort(tableId, sortKeyState, rerenderFn){
+  updateSortIndicators(tableId, sortKeyState);
+  document.querySelectorAll(`#${tableId} thead th`).forEach(th => {
+    // .onclick (not addEventListener): table headers are static DOM that persist
+    // across refreshes, so re-running this must replace, not stack, the handler.
+    th.onclick = () => {
+      const key = th.dataset.key;
+      if (sortKeyState.key === key) sortKeyState.dir *= -1;
+      else { sortKeyState.key = key; sortKeyState.dir = -1; }
+      updateSortIndicators(tableId, sortKeyState);
+      rerenderFn();
+    };
+  });
+}
+
+// ============ Main render ============
+function render(){
+  const rows = filteredDetail();
+
+  // ---- KPI ----
+  const totalShip = rows.reduce((a,d)=>a+d.shipments,0);
+  const totalPkg = rows.reduce((a,d)=>a+d.packages,0);
+  const totalLT = rows.reduce((a,d)=>a+d.lt_sum,0);
+  const avgLT = totalShip ? totalLT/totalShip : 0;
+  const byStatus = {}; STATUS_ORDER.forEach(s=>byStatus[s]=0);
+  const byStatusPkg = {}; STATUS_ORDER.forEach(s=>byStatusPkg[s]=0);
+  rows.forEach(d => {
+    byStatus[d.status] = (byStatus[d.status]||0) + d.shipments;
+    byStatusPkg[d.status] = (byStatusPkg[d.status]||0) + d.packages;
+  });
+  const pctOn3 = totalShip ? byStatus['ส่งภายใน 3 วัน']/totalShip*100 : 0;
+  const pctOn7 = totalShip ? byStatus['ส่งภายใน 7 วัน']/totalShip*100 : 0;
+  const pctOver7 = totalShip ? byStatus['เกิน 7 วัน']/totalShip*100 : 0;
+
+  const kpiRow = document.getElementById('kpiRow');
+  kpiRow.innerHTML = `
+    <div class="kpi-card"><div class="bar" style="background:#12897f"></div>
+      <div class="kpi-label">ออเดอร์ทั้งหมด</div>
+      <div class="kpi-value">${fmtInt(totalShip)}</div>
+      <div class="kpi-sub">${fmtInt(totalPkg)} ห่อ</div>
+    </div>
+    <div class="kpi-card"><div class="bar" style="background:#233a63"></div>
+      <div class="kpi-label">Lead Time เฉลี่ย</div>
+      <div class="kpi-value">${fmt1(avgLT)}<span class="kpi-unit">วัน</span></div>
+      <div class="kpi-sub">ตามช่วงที่เลือก</div>
+    </div>
+    <div class="kpi-card"><div class="bar" style="background:#2f9e6e"></div>
+      <div class="kpi-label">ส่งภายใน 3 วัน</div>
+      <div class="kpi-value">${fmt1(pctOn3)}<span class="kpi-unit">%</span></div>
+      <div class="kpi-substats">
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#2f9e6e">${fmtInt(byStatus['ส่งภายใน 3 วัน'])}</div><div class="kpi-substat-lbl">ออเดอร์</div></div>
+        <div class="kpi-substat-divider"></div>
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#2f9e6e">${fmtInt(byStatusPkg['ส่งภายใน 3 วัน'])}</div><div class="kpi-substat-lbl">ห่อ</div></div>
+      </div>
+    </div>
+    <div class="kpi-card"><div class="bar" style="background:#e8983a"></div>
+      <div class="kpi-label">ส่งภายใน 7 วัน</div>
+      <div class="kpi-value">${fmt1(pctOn7)}<span class="kpi-unit">%</span></div>
+      <div class="kpi-substats">
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#e8983a">${fmtInt(byStatus['ส่งภายใน 7 วัน'])}</div><div class="kpi-substat-lbl">ออเดอร์</div></div>
+        <div class="kpi-substat-divider"></div>
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#e8983a">${fmtInt(byStatusPkg['ส่งภายใน 7 วัน'])}</div><div class="kpi-substat-lbl">ห่อ</div></div>
+      </div>
+    </div>
+    <div class="kpi-card"><div class="bar" style="background:#d9564a"></div>
+      <div class="kpi-label">เกิน 7 วัน</div>
+      <div class="kpi-value">${fmt1(pctOver7)}<span class="kpi-unit">%</span></div>
+      <div class="kpi-substats">
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#d9564a">${fmtInt(byStatus['เกิน 7 วัน'])}</div><div class="kpi-substat-lbl">ออเดอร์</div></div>
+        <div class="kpi-substat-divider"></div>
+        <div class="kpi-substat"><div class="kpi-substat-val" style="color:#d9564a">${fmtInt(byStatusPkg['เกิน 7 วัน'])}</div><div class="kpi-substat-lbl">ห่อ</div></div>
+      </div>
+    </div>
+  `;
+
+  // ---- Trend chart (by month) ----
+  const monthsSelected = months.filter(m => state.months.has(m));
+  const monthAgg = monthsSelected.map(m => {
+    const mrows = rows.filter(d => d.month === m);
+    const ship = mrows.reduce((a,d)=>a+d.shipments,0);
+    const lt = mrows.reduce((a,d)=>a+d.lt_sum,0);
+    return { m, ship, avgLT: ship? lt/ship : 0 };
+  });
+  renderTrendChart('trendChart',
+    monthAgg.map(x=>months_display[x.m]),
+    monthAgg.map(x=>x.ship),
+    monthAgg.map(x=>Math.round(x.avgLT*100)/100)
+  );
+
+  // ---- Status donut ----
+  renderDonut('statusDonut', STATUS_ORDER.map(s => ({ label:s, value:byStatus[s], packages:byStatusPkg[s], color:STATUS_COLOR[s] })));
+
+  // ---- Route comparison bar (ignores route filter itself, shows all route groups for context) ----
+  const routeAgg = {};
+  routes.forEach(r => routeAgg[r] = {ship:0, on3:0});
+  filteredGroupByMonth(detail).forEach(d => {
+    if (state.province !== 'ALL' && d.province !== state.province) return;
+    if (!routeAgg[d.route]) routeAgg[d.route] = {ship:0, on3:0};
+    routeAgg[d.route].ship += d.shipments;
+    if (d.status === 'ส่งภายใน 3 วัน') routeAgg[d.route].on3 += d.shipments;
+  });
+  const routeEntries = Object.entries(routeAgg).filter(([,v])=>v.ship>0).sort((a,b)=>b[1].ship-a[1].ship);
+  renderBarList('routeBar', routeEntries.map(([r,v]) => ({
+    label:r,
+    value: v.ship? v.on3/v.ship*100 : 0,
+    color: r===state.route ? '#0b1830' : '#12897f'
+  })), { suffix:'%' });
+
+  // ---- Province bar top 12 ----
+  const provAgg = {};
+  rows.forEach(d => {
+    if (!provAgg[d.province]) provAgg[d.province] = {ship:0, lt:0};
+    provAgg[d.province].ship += d.shipments;
+    provAgg[d.province].lt += d.lt_sum;
+  });
+  const provTop = Object.entries(provAgg).map(([p,v])=>({p, ship:v.ship, avgLT: v.ship? v.lt/v.ship:0}))
+    .sort((a,b)=>b.ship-a.ship).slice(0,12);
+  renderBarList('provinceBar', provTop.map(x => ({
+    label:x.p, value:x.ship, color: ltColor(x.avgLT), extra: `${fmt1(x.avgLT)} วัน`
+  })));
+
+  // ---- Carrier table (month filter only) ----
+  renderAggTable('carrier', carrier, 'carrier', sortState.carrier);
+
+  // ---- Route x Month summary (3/7/over-7 day buckets) ----
+  renderRouteMonthSummary(rows, byStatus, byStatusPkg);
+
+  // ---- Detail table ----
+  renderDetailSection(rows);
+}
+
+function renderAggTable(tableId, sourceRows, keyField, sortInfo){
+  const filtered = sourceRows.filter(d => state.months.has(d.month));
+  const agg = {};
+  filtered.forEach(d => {
+    const name = d[keyField];
+    if (!agg[name]) agg[name] = {shipments:0, lt_sum:0, on3:0};
+    agg[name].shipments += d.shipments;
+    agg[name].lt_sum += d.lt_sum;
+    if (d.status === 'ส่งภายใน 3 วัน') agg[name].on3 += d.shipments;
+  });
+  let list = Object.entries(agg).map(([name,v])=>({
+    name, shipments:v.shipments, avgLT: v.shipments? v.lt_sum/v.shipments:0,
+    onTimePct: v.shipments? v.on3/v.shipments*100:0
+  }));
+  list.sort((a,b)=> (a[sortInfo.key] > b[sortInfo.key] ? 1 : -1) * sortInfo.dir);
+  list = list.slice(0,25);
+
+  const tbody = document.querySelector(`#${tableId}Table tbody`);
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td class="num-cell">${fmtInt(r.shipments)}</td>
+      <td class="num-cell">${fmt1(r.avgLT)} วัน</td>
+      <td class="num-cell">${statusBadge(r.onTimePct)}</td>
+    </tr>
+  `).join('');
+}
+
+function statusBadge(pct){
+  const cls = pct >= 85 ? 'badge-green' : pct >= 60 ? 'badge-amber' : 'badge-red';
+  return `<span class="badge ${cls}">${fmt1(pct)}%</span>`;
+}
+
+// ---- Route x Month summary (3-day / 7-day / over-7-day buckets) ----
+function renderRouteMonthSummary(rows, byStatus, byStatusPkg){
+  const byMonth = {};
+  rows.forEach(r => {
+    if (!byMonth[r.month]) byMonth[r.month] = {};
+    const mg = byMonth[r.month];
+    if (!mg[r.route]) mg[r.route] = { on3:0, on7:0, over7:0, total:0 };
+    const g = mg[r.route];
+    g.total += r.shipments;
+    if (r.status === 'ส่งภายใน 3 วัน') g.on3 += r.shipments;
+    else if (r.status === 'ส่งภายใน 7 วัน') g.on7 += r.shipments;
+    else g.over7 += r.shipments;
+  });
+
+  const monthKeys = Object.keys(byMonth).sort();
+  const wrap = document.getElementById('routeMonthGroupedWrap');
+
+  if (!monthKeys.length){
+    wrap.innerHTML = `<div class="empty-state">ไม่พบข้อมูลตามตัวกรองที่เลือก</div>`;
+  } else {
+    const cell = (count, total, cls) => {
+      const pct = total ? (count/total*100) : 0;
+      return `<td class="num-cell"><span class="badge ${cls}">${fmtInt(count)}</span> <span style="color:var(--ink-300)">${fmt1(pct)}%</span></td>`;
+    };
+    const html = monthKeys.map((m, idx) => {
+      const mg = byMonth[m];
+      const routeEntries = Object.entries(mg).sort((a,b) => b[1].total - a[1].total);
+      const mTotal = routeEntries.reduce((a,[,v]) => a+v.total, 0);
+      const routeRows = routeEntries.map(([route, v]) => `
+        <tr>
+          <td class="route-cell">${route}</td>
+          ${cell(v.on3, v.total, 'badge-green')}
+          ${cell(v.on7, v.total, 'badge-amber')}
+          ${cell(v.over7, v.total, 'badge-red')}
+          <td class="num-cell"><b>${fmtInt(v.total)}</b></td>
+        </tr>`).join('');
+
+      return `
+        <details class="month-group" ${idx < 2 ? 'open' : ''}>
+          <summary>
+            <span class="month-group-title">${months_display[m]} ${m.split('-')[0]}</span>
+            <span class="month-group-stats"><span><b>${fmtInt(mTotal)}</b> ออเดอร์</span></span>
+          </summary>
+          <table class="subtable">
+            <thead><tr>
+              <th>เส้นทาง</th>
+              <th style="text-align:right">ภายใน 3 วัน</th>
+              <th style="text-align:right">ภายใน 7 วัน</th>
+              <th style="text-align:right">เกิน 7 วัน</th>
+              <th style="text-align:right">รวม</th>
+            </tr></thead>
+            <tbody>${routeRows}</tbody>
+          </table>
+        </details>`;
+    }).join('');
+    wrap.innerHTML = html;
+  }
+
+  renderDonut('routeMonthDonut', STATUS_ORDER.map(s => ({
+    label: s, value: byStatus[s], packages: byStatusPkg[s], color: STATUS_COLOR[s]
+  })));
+}
+
+function renderDetailSection(rows){
+  const flatWrap = document.getElementById('detailFlatWrap');
+  const groupedWrap = document.getElementById('detailGroupedWrap');
+  const note = document.getElementById('detailNote');
+
+  if (detailState.status === 'ALL') {
+    flatWrap.style.display = '';
+    groupedWrap.style.display = 'none';
+    note.textContent = 'คลิกหัวตารางเพื่อเรียงลำดับ';
+    renderDetailTable(rows);
+  } else {
+    flatWrap.style.display = 'none';
+    groupedWrap.style.display = '';
+    note.textContent = `แบ่งตามเดือน → เส้นทาง สำหรับสถานะ "${detailState.status}"`;
+    renderDetailGrouped(rows);
+  }
+}
+
+function renderDetailTable(rows){
+  let base = rows;
+  if (detailSearchTerm) {
+    base = base.filter(r => r.province.toLowerCase().includes(detailSearchTerm) || r.route.toLowerCase().includes(detailSearchTerm));
+  }
+  const agg = {};
+  base.forEach(d => {
+    const key = `${d.month}|${d.route}|${d.status}`;
+    if (!agg[key]) agg[key] = {month:d.month, route:d.route, status:d.status, shipments:0, packages:0, lt_sum:0};
+    agg[key].shipments += d.shipments;
+    agg[key].packages += d.packages;
+    agg[key].lt_sum += d.lt_sum;
+  });
+  let list = Object.values(agg).map(r => ({...r, avgLT: r.shipments? r.lt_sum/r.shipments : 0}));
+  const si = sortState.detail;
+  list.sort((a,b)=>{
+    const av=a[si.key], bv=b[si.key];
+    if (typeof av === 'string') return av.localeCompare(bv,'th') * si.dir;
+    return (av-bv) * si.dir;
+  });
+  list = list.slice(0, 300);
+
+  const tbody = document.querySelector('#detailTable tbody');
+  if (!list.length){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">ไม่พบข้อมูลตามตัวกรองที่เลือก</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${months_display[r.month]}</td>
+      <td class="route-cell">${r.route}</td>
+      <td>${statusChip(r.status)}</td>
+      <td class="num-cell">${fmtInt(r.shipments)}</td>
+      <td class="num-cell">${fmtInt(r.packages)}</td>
+      <td class="num-cell">${fmt1(r.avgLT)} วัน</td>
+    </tr>
+  `).join('');
+}
+
+function renderDetailGrouped(rows){
+  let filtered = rows.filter(r => r.status === detailState.status);
+  if (detailSearchTerm) {
+    filtered = filtered.filter(r => r.province.toLowerCase().includes(detailSearchTerm) || r.route.toLowerCase().includes(detailSearchTerm));
+  }
+
+  const byMonth = {};
+  filtered.forEach(r => {
+    if (!byMonth[r.month]) byMonth[r.month] = { shipments:0, packages:0, lt_sum:0, routes:{} };
+    const mg = byMonth[r.month];
+    mg.shipments += r.shipments; mg.packages += r.packages; mg.lt_sum += r.lt_sum;
+    if (!mg.routes[r.route]) mg.routes[r.route] = { shipments:0, packages:0, lt_sum:0 };
+    mg.routes[r.route].shipments += r.shipments;
+    mg.routes[r.route].packages += r.packages;
+    mg.routes[r.route].lt_sum += r.lt_sum;
+  });
+
+  const monthKeys = Object.keys(byMonth).sort(); // 'YYYY-MM' sorts chronologically as string
+  const wrap = document.getElementById('detailGroupedWrap');
+
+  if (!monthKeys.length){
+    wrap.innerHTML = `<div class="empty-state">ไม่พบข้อมูลตามตัวกรองที่เลือก</div>`;
+    return;
+  }
+
+  const html = monthKeys.map((m, idx) => {
+    const mg = byMonth[m];
+    const avgLT = mg.shipments ? mg.lt_sum / mg.shipments : 0;
+    const routeRows = Object.entries(mg.routes)
+      .sort((a,b) => b[1].shipments - a[1].shipments)
+      .map(([route, v]) => {
+        const ravgLT = v.shipments ? v.lt_sum / v.shipments : 0;
+        return `<tr>
+          <td>${route}</td>
+          <td class="num-cell">${fmtInt(v.shipments)}</td>
+          <td class="num-cell">${fmtInt(v.packages)}</td>
+          <td class="num-cell">${fmt1(ravgLT)} วัน</td>
+        </tr>`;
+      }).join('');
+
+    return `
+      <details class="month-group" ${idx < 3 ? 'open' : ''}>
+        <summary>
+          <span class="month-group-title">${months_display[m]} ${m.split('-')[0]}</span>
+          <span class="month-group-stats">
+            <span><b>${fmtInt(mg.shipments)}</b> ออเดอร์</span>
+            <span><b>${fmtInt(mg.packages)}</b> ห่อ</span>
+            <span><b>${fmt1(avgLT)}</b> วัน เฉลี่ย</span>
+          </span>
+        </summary>
+        <table class="subtable">
+          <thead><tr>
+            <th>เส้นทาง</th>
+            <th style="text-align:right">ออเดอร์</th>
+            <th style="text-align:right">จำนวนห่อ</th>
+            <th style="text-align:right">LT เฉลี่ย</th>
+          </tr></thead>
+          <tbody>${routeRows}</tbody>
+        </table>
+      </details>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="grouped-scroll">${html}</div>`;
+}
+
+function statusChip(s){
+  const color = STATUS_COLOR[s];
+  return `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>${s}</span>`;
+}
+
+// .oninput (not addEventListener): this input is static DOM that persists
+// across refreshes, so re-running this must replace, not stack, the handler.
+document.getElementById('detailSearch').oninput = (e) => {
+  detailSearchTerm = e.target.value.trim().toLowerCase();
+  renderDetailSection(filteredDetail());
+};
+
+attachSort('carrierTable', sortState.carrier, () => renderAggTable('carrier', carrier, 'carrier', sortState.carrier));
+attachSort('detailTable', sortState.detail, () => renderDetailTable(filteredDetail()));
+
+buildCharts();
+render();
+} // ============ end renderDashboard() ============
+
+// ============================================================
+// ============ Fetch → render loop (this is what makes it "live") ============
+// ============================================================
+async function refreshFromSheet(){
+  setSyncState('loading');
+  try {
+    const RAW = await loadData();
+    renderDashboard(RAW);
+    setSyncState('ok', new Date());
+  } catch (err) {
+    console.error('Refresh failed:', err);
+    setSyncState('error', err.message || String(err));
+  }
+}
+
+document.getElementById('manualRefreshBtn').addEventListener('click', refreshFromSheet);
+
+// ============ Init ============
+refreshFromSheet();
+setInterval(refreshFromSheet, REFRESH_INTERVAL_MS);
+
+</script>
+</body>
+</html>
