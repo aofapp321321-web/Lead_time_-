@@ -414,12 +414,7 @@
           <div class="card-note">รวมยอดของแต่ละเดือน แยกรายละเอียดเป็นกลุ่มเส้นทาง สรุปสัดส่วน ภายใน 3 วัน / ภายใน 7 วัน / เกิน 7 วัน</div>
         </div>
       </div>
-      <div class="grid2" style="margin-bottom:0;">
-        <div id="routeMonthGroupedWrap" class="grouped-scroll" style="max-height:520px;"></div>
-        <div>
-          <div class="chart-wrap tall" id="routeMonthDonut"></div>
-        </div>
-      </div>
+      <div id="routeMonthGroupedWrap" class="grouped-scroll" style="max-height:520px;"></div>
     </div>
 
     <div class="card">
@@ -485,6 +480,32 @@ const COL = {
 //   - มีเลขในวงเล็บต่อท้าย เช่น สุรินทร์พนมรุ้ง(5)        → ขนส่ง (บริษัทขนส่งเอกชนต่างจังหวัด)
 //   - ชื่อพื้นที่ในกรุงเทพ/ปริมณฑล ไม่มีวงเล็บ เช่น บางนา  → กรุงเทพและปริมณฑล
 const ROUTE_DISPLAY_ORDER = ['กรุงเทพและปริมณฑล','ขนส่ง','ต่างจังหวัด-รถบริษัท'];
+
+// สายส่งที่รู้จักชื่อเฉพาะ — จะมีแถวของตัวเองในตาราง "ประสิทธิภาพสายส่ง"
+// ชื่อไหนไม่อยู่ในลิสต์นี้ (พิมพ์ผิด, ชื่อใหม่, ค่าว่าง ฯลฯ) จะถูกรวมเป็น "ขนส่ง" แทน
+const KNOWN_CARRIERS = new Set([
+  'ต่างจังหวัด-รถบริษัท',
+  'บางนา',
+  'อ่อนนุช',
+  'ตลาดไท',
+  'บางใหญ่',
+  'ลาดพร้าว',
+  'พระราม2',
+  'ปากน้ำ-แพรกษา',
+  'เพชรเกษม',
+  'รามอินทรา',
+  'ร่มเกล้า',
+  'พระราม 3',
+  'รังสิต',
+  'ลำลูกกา',
+  'สำโรง',
+  'สี่มุมเมือง',
+]);
+
+function resolveCarrierLabel(rawCarrierName){
+  const c = (rawCarrierName || '').trim();
+  return KNOWN_CARRIERS.has(c) ? c : 'ขนส่ง';
+}
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 function resolveRoute(carrierName){
@@ -625,8 +646,9 @@ function buildRAW(rawRows){
     if (!shipDate || !billDate) return; // ข้ามแถวที่วันที่อ่านไม่ออก (เช่นแถวว่าง)
 
     const packages = parseFloat(row[COL.PACKAGES]) || 0;
-    const carrierName = (row[COL.CARRIER] || '').trim() || 'ไม่ระบุ';
-    const route = resolveRoute(carrierName);
+    const rawCarrierName = (row[COL.CARRIER] || '').trim() || 'ไม่ระบุ';
+    const route = resolveRoute(rawCarrierName);
+    const carrierName = resolveCarrierLabel(rawCarrierName);
     const province = (row[COL.PROVINCE] || '').trim() || 'ไม่ระบุ';
 
     const lt = Math.max(daysBetween(shipDate, billDate), 0);
@@ -881,12 +903,22 @@ function renderTrendChart(containerId, labels, bars, line){
   const n = Math.max(labels.length, 1);
   const colW = plotW / n;
   const barW = Math.min(colW * 0.46, 46);
-  const maxBar = Math.max(...bars, 1) * 1.28;
-  const maxLine = Math.max(...line, 0.1) * 1.35;
+  const maxBar = Math.max(...bars, 1) * 1.55;
 
   const xAt = i => mL + i * colW + colW / 2;
   const barY = v => mT + plotH - (v / maxBar) * plotH;
-  const lineY = v => mT + plotH - (v / maxLine) * plotH;
+
+  // The LT line lives in its own fixed corridor pinned to the top of the
+  // chart, scaled only against its own min/max — completely independent of
+  // bar height. Combined with the taller maxBar headroom above, the tallest
+  // possible bar top still sits well below this corridor, so the line (and
+  // its labels) can never overlap a bar, in any month, for any data.
+  const lineMin = Math.min(...line);
+  const lineMax = Math.max(...line);
+  const lineSpan = Math.max(lineMax - lineMin, 0.1);
+  const corridorTop = mT + 16;
+  const corridorBottom = mT + plotH * 0.30;
+  const lineY = v => corridorBottom - ((v - lineMin) / lineSpan) * (corridorBottom - corridorTop);
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
   svg += `<defs>
@@ -910,7 +942,15 @@ function renderTrendChart(containerId, labels, bars, line){
     const h = mT + plotH - y;
     const r = Math.min(8, barW/2);
     svg += `<path d="M${x},${y+r} a${r},${r} 0 0 1 ${r},-${r} h${barW-2*r} a${r},${r} 0 0 1 ${r},${r} v${h-r} h${-barW} Z" fill="url(#barGrad)"/>`;
-    svg += `<text class="trend-bar-label" x="${xAt(i)}" y="${y-8}">${fmtInt(bars[i])}</text>`;
+
+    // Number sits inside the bar (white, bold) when there's room; short bars
+    // fall back to just above the bar so the digits never spill outside it.
+    const insideBar = h > 30;
+    const barLabelY = insideBar ? y + 19 : y - 8;
+    const barLabelStyle = insideBar
+      ? 'fill:#ffffff;font-weight:700;'
+      : 'fill:var(--ink-700);font-weight:600;';
+    svg += `<text class="trend-bar-label" x="${xAt(i)}" y="${barLabelY}" style="${barLabelStyle}">${fmtInt(bars[i])}</text>`;
     svg += `<text class="trend-axis-label" x="${xAt(i)}" y="${H-10}">${lab}</text>`;
   });
 
@@ -923,10 +963,10 @@ function renderTrendChart(containerId, labels, bars, line){
       const mx = (x0+x1)/2;
       path += ` C ${mx},${y0} ${mx},${y1} ${x1},${y1}`;
     }
-    svg += `<path d="${path}" fill="none" stroke="#0b1830" stroke-width="2.5" stroke-linecap="round"/>`;
+    svg += `<path d="${path}" fill="none" stroke="#ff7a3d" stroke-width="3" stroke-linecap="round"/>`;
     pts.forEach(([x,y], i) => {
-      svg += `<circle cx="${x}" cy="${y}" r="4.5" fill="#0b1830" stroke="#fff" stroke-width="2"/>`;
-      svg += `<text class="trend-line-label" x="${x}" y="${y-11}">${fmt1(line[i])}</text>`;
+      svg += `<circle cx="${x}" cy="${y}" r="5" fill="#ff7a3d" stroke="#fff" stroke-width="2.5"/>`;
+      svg += `<text class="trend-line-label" x="${x}" y="${y-12}" style="fill:#c1461a;font-weight:700;paint-order:stroke;stroke:#ffffff;stroke-width:3.5;stroke-linejoin:round;">${fmt1(line[i])}</text>`;
     });
   }
 
@@ -934,7 +974,7 @@ function renderTrendChart(containerId, labels, bars, line){
   el.innerHTML = `<div class="trend-svg-wrap">${svg}</div>
     <div class="trend-legend">
       <span><i style="background:#1aa89c"></i>จำนวนออเดอร์</span>
-      <span><i style="background:#0b1830"></i>LT เฉลี่ย (วัน)</span>
+      <span><i style="background:#ff7a3d"></i>LT เฉลี่ย (วัน)</span>
     </div>`;
 }
 
@@ -1226,10 +1266,6 @@ function renderRouteMonthSummary(rows, byStatus, byStatusPkg){
     }).join('');
     wrap.innerHTML = html;
   }
-
-  renderDonut('routeMonthDonut', STATUS_ORDER.map(s => ({
-    label: s, value: byStatus[s], packages: byStatusPkg[s], color: STATUS_COLOR[s]
-  })));
 }
 
 function renderDetailSection(rows){
